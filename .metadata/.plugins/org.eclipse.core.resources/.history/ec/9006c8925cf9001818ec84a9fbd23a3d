@@ -1,9 +1,0 @@
-package com.it18zhang.archiver;
-
-public class shuchu {
-	
-	public static void main(String[] args){
-		System.out.println("1");
-	}
-	
-}
