@@ -1,0 +1,206 @@
+# coding:utf-8
+import urllib2
+import urllib
+import re
+import time
+import numpy as np
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+keyword = ''
+location = ''
+startTime = ''
+endTime = ''
+page = ''
+
+cookies = [
+    # chenzan
+    "UM_distinctid=16260b6599d4a4-03b7b32ab03dbe-336d7b05-fa000-16260b6599ecc; SINAGLOBAL=5808509960404.141.1522040986352; _ga=GA1.2.2042415645.1524223358; YF-Page-G0=b35da6f93109faa87e8c89e98abf1260; YF-V5-G0=35ff6d315d1a536c0891f71721feb16e; _s_tentry=passport.weibo.com; Apache=3492794881676.0625.1528116833136; ULV=1528116833157:26:3:1:3492794881676.0625.1528116833136:1527902787269; YF-Ugrow-G0=b02489d329584fca03ad6347fc915997; appkey=; login_sid_t=ec57f96f38243613512f8a3a84b6f2e6; cross_origin_proto=SSL; wb_view_log=1280*8002; UOR=,,login.sina.com.cn; un=18351929223; SSOLoginState=1528163134; SCF=Am4vXQQtR7co8lxDcVtz9dWDCOleAZwOerd5xl3FLLmWvH3dxyk-Ja40SroB3h3wMenaX8o3Hi1lc6T65bnuKpg.; SUHB=0jBIm2lIOHbUZ2; wvr=6; ALF=1530756053; SUB=_2A252EZ6FDeRhGeNI4lQS9CvPyzSIHXVV_SLNrDV8PUJbkNBeLXXGkW1NSAeMUQEK4g8UwbtDKGUgvRP7u6phSsDH; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFpF70GzU6OjBAXas-dcpSa5JpX5oz75NHD95QfSo.ce0Bfe05RWs4Dqc_Ii--fiKLFi-27i--Xi-zRi-iWi--ciKnRiK.pi--ciK.Ri-8si--Xi-i2i-27i--NiKLWiKnXi--fi-z7iKysi--fi-2Xi-8Wi--4iK.Ri-z0i--fiK.fiKyW",
+    
+]
+cookies = np.array(cookies)
+
+
+def getHtml(url, cookie, user_agent="wswp", num_retries=2):  # 下载网页，如果下载失败重新下载两次
+    print '开始下载网页：', url
+    user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:24.0) Gecko/20100101 Firefox/24.0'
+
+    index = np.argwhere(cookies == cookie)
+    print("使用的cookie是：", index)
+    headers = {"User-agent": user_agent,
+               "Cookie": cookie}
+    request = urllib2.Request(url, headers=headers)  # request请求包
+    try:
+        html = urllib2.urlopen(request).read()  # GET请求
+    except urllib2.URLError as e:
+        print "下载失败：", e.reason
+        html = None
+        if num_retries > 0:
+            if hasattr(e, 'code') and 500 <= e.code < 600:
+                return getHtml(url, num_retries - 1)
+    return html
+
+def getHtml_without_cookie(url, user_agent="wswp", num_retries=2):  # 下载网页，如果下载失败重新下载两次
+    print '开始下载完整网页内容：', url
+    #   headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; rv:24.0) Gecko/20100101 Firefox/24.0'}
+    headers = {"User-agent": user_agent,
+
+    }
+    request = urllib2.Request(url, headers=headers)  # request请求包
+    try:
+        html = urllib2.urlopen(request).read()  # GET请求
+    except urllib2.URLError as e:
+        print "下载失败：", e.reason
+        html = None
+        if num_retries > 0:
+            if hasattr(e, 'code') and 500 <= e.code < 600:
+                return getHtml(url, num_retries - 1)
+    return html
+
+def analyse_page(result):
+
+    result = str(result)
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(result, 'lxml')
+    scripts = soup.find_all("script")
+
+    for line in scripts:
+        line_str = str(line)
+
+        # line_str = line.decode("utf-8")
+        if line_str.startswith('<script>STK && STK.pageletM && STK.pageletM.view({"pid":"pl_weibo_direct"'):
+            # ee = 'html":"'.encode(encoding="utf-8")
+            n = line_str.find('html":"')
+            if n > 0:
+                j = line_str[n + 7: -12].encode("utf-8").decode('unicode_escape').encode("utf-8").replace("\\", "")
+                if (j.find(b'<div class="pl_noresult">') > 0):
+                    # import MySQLdb
+                    # conn1 = MySQLdb.connect(host="192.168.1.151", port=3306, user="lxp", passwd="123", db="Storyline", charset="utf8")
+                    # cursor = conn1.cursor()
+                    # print(location, startTime, endTime, page)
+                    # cursor.execute("UPDATE sina_task_copy1 SET figure = 2 WHERE keyword = '台风' and location= %s and starttime= %s and endtime= %s and page = %d" % (location, startTime, endTime, int(page)))
+                    # conn1.commit()
+                    # conn1.close()
+                    # cursor.close()
+                    print("该页没有内容")
+                    time.sleep(10)
+                else:
+                    j = j.decode('utf-8')
+                    from bs4 import BeautifulSoup
+
+                    soup = BeautifulSoup(j, 'lxml')
+                    units = soup.find_all("div", class_="WB_feed_detail clearfix")
+
+                    print(len(units))
+                    for unit in units:
+                        content = unit.find("div", class_="feed_content wbcon")
+                        name = content.find("a", class_="W_texta W_fb").text
+                        name = name.replace("\t", "").replace("\n", "")
+
+                        info = content.find("p", class_="comment_txt").text
+                        info = info.replace("\t", "")
+
+                        unit_parent = unit.parent
+                        info_url = 'https://s.weibo.com/ajax/direct/morethan140?mid=' + unit_parent['mid']
+                        info_html = getHtml_without_cookie(info_url)
+
+                        import json
+
+                        if info_html:
+                            print("ajax 更新数据")
+                            info_dict = json.loads(info_html)
+                            ff = info_dict['data']['html']
+                            qq = BeautifulSoup(ff, 'lxml')
+                            info = qq.text
+
+                        dirty_stuff = ["\"", "\\", "/", "*", "'", "=", "-", "#", ";", "<", ">", "+", "%", "$", "(", ")",
+                                       "%", "@", "!"]
+                        for stuff in dirty_stuff:
+                            info = info.replace(stuff, "")
+
+                        highpoints = re.compile(u'[\uD800-\uDBFF][\uDC00-\uDFFF]')
+
+                        info = highpoints.sub(u'', info)
+
+
+
+                        timestrap_pre = unit.find("div", class_="feed_from W_textb")
+                        timestrap = timestrap_pre.find("a").text
+                        print("name:", name)
+                        print("info:", info.decode("utf-8"))
+                        print("time:", timestrap)
+
+                        print("数据存储进数据库")
+                        import MySQLdb
+                        # typhon = '台风'
+                        # conn = MySQLdb.connect(host="192.168.1.151", port=3306, user="lxp", passwd="123",db="Storyline",charset="utf8")
+                        # cursor = conn.cursor()
+                        # cursor.execute(
+                        #     'INSERT INTO xixi(typhon,nickname,timestrap,information,location) VALUES ("%s","%s","%s","%s","%s") ' % (
+                        #         str(typhon), str(name), str(timestrap), str(info),str(location)))
+                        # conn.commit()
+                        # conn.close()
+                        # time.sleep(2)
+
+                    print("本页爬取结束")
+                    import MySQLdb
+                    # conn1 = MySQLdb.connect(host="192.168.1.151", port=3306, user="lxp", passwd="123", db="Storyline", charset="utf8")
+                    # cursor = conn1.cursor()
+                    # cursor.execute(
+                    #     "UPDATE sina_task_copy1 SET figure = 1 WHERE keyword = '台风' and location= %s and starttime= %s and endtime= %s and page = %d" % (
+                    #     location, startTime, endTime, page))
+                    # conn1.commit()
+                    # conn1.close()
+                    # cursor.close()
+                    time.sleep(15)
+
+
+
+
+
+def getKeyWord(keyword):  # 关键字需要进行两次urlencode
+    once = urllib.urlencode({"kw": keyword})[3:]
+    return urllib.urlencode({"kw": once})[3:]
+
+def setTimescope(startTime, endTime):
+    before = str(startTime[:4]) + '-' + str(startTime[4:6]) + '-' + str(startTime[6:8])
+    after = str(endTime[:4]) + '-' + str(endTime[4:6]) + '-' + str(endTime[6:8])
+    return before + ':' + after
+
+def setLocation(location):
+    return str(location) + ":" + "1000"
+
+def get_url():
+    global keyword,location,startTime,endTime,page
+    base_url = "http://s.weibo.com/weibo/"
+
+    import MySQLdb
+    conn = MySQLdb.connect(host="192.168.1.151", port=3306, user="lxp", passwd="123", db="Storyline", charset="utf8")
+    cursor = conn.cursor()
+    cursor.execute("select * from sina_task_copy1 where figure = 0 ")
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    for res in results:
+        keyword = res[0]
+        location = res[1]
+        startTime = res[2]
+        endTime = res[4]
+        page = res[3]
+        figure = res[5]
+        if figure == 0:
+            figure = True
+        else:
+            figure = False
+
+        url = base_url + getKeyWord(keyword) + "&region=custom:" + setLocation(location) + "&scope=ori&suball=1&" + "timescope=custom:" + str(setTimescope(startTime,endTime)) + "&page=" + str(page)
+        yield url
+
+if __name__ == '__main__':
+
+    for url_unit in get_url():
+        cookie = np.random.choice(cookies)
+        result = getHtml(url_unit,cookie=cookie)
+        analyse_page(result)

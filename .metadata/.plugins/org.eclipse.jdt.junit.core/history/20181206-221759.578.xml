@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?><testrun name="TestZip.zip" project="Archiver" tests="1" started="1" failures="0" errors="0" ignored="0">
+  <testsuite name="com.it18zhang.archive.test.TestZip" time="0.209" uniqueid="[engine:junit-vintage]/[runner:com.it18zhang.archive.test.TestZip]">
+    <testcase name="zip" classname="com.it18zhang.archive.test.TestZip" time="0.209" displayname="zip" uniqueid="[engine:junit-vintage]/[runner:com.it18zhang.archive.test.TestZip]/[test:zip(com.it18zhang.archive.test.TestZip)]"/>
+  </testsuite>
+</testrun>
